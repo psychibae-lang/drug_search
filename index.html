@@ -453,13 +453,17 @@ async function loadAiInfo(d) {
       method: 'POST',
       headers: {'Content-Type':'application/json','Authorization':'Bearer '+ANON_KEY},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1000,
         messages: [{role:'user', content: prompt}]
       })
     });
-    const json = await res.json();
-    const text = json.content?.[0]?.text || '';
+    const rawText = await res.text();
+    let json;
+    try { json = JSON.parse(rawText); } catch(e) { throw new Error('응답 파싱 실패: ' + rawText.slice(0, 100)); }
+
+    // proxy가 Claude 응답을 그대로 넘기거나 {content} 형태로 넘길 수 있음
+    const text = json.content?.[0]?.text || json.text || json.result || rawText;
     const clean = text.replace(/```json|```/g,'').trim();
     let info = {};
     try { info = JSON.parse(clean); } catch(e) { info = {effect: text}; }
@@ -473,7 +477,7 @@ async function loadAiInfo(d) {
     renderDrugInfo(merged);
 
   } catch(e) {
-    const errMsg = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">정보를 불러올 수 없습니다.<br>잠시 후 다시 시도해 주세요.</div></div>`;
+    const errMsg = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">AI 정보를 불러올 수 없습니다.<br><span style="font-size:11px;color:#e53e3e;">${e.message}</span></div></div>`;
     ['tabEffect','tabSide','tabMech','tabInteract','tabCaution'].forEach(id => {
       document.getElementById(id).innerHTML = errMsg;
     });

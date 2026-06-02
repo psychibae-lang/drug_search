@@ -62,9 +62,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .drug-list{flex:1;overflow-y:auto;padding:0 16px 100px;}
 .drug-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;transition:all 0.15s;}
 .drug-item:hover{border-color:var(--accent);background:var(--accent-soft);}
-.drug-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden;position:relative;}
-.drug-icon img{width:100%;height:100%;object-fit:cover;border-radius:12px;position:absolute;inset:0;}
-.drug-icon-fallback{position:relative;z-index:1;}
+.drug-icon{width:88px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden;position:relative;background:#f3f4f6;}
+.drug-icon.has-img{background:#fff !important;}
+.drug-icon img{width:100%;height:100%;object-fit:contain;display:block;}
+.drug-icon-fallback{font-size:22px;}
 .drug-item-info{flex:1;min-width:0;}
 .drug-item-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .drug-item-code{font-size:11px;color:var(--text3);font-family:monospace;}
@@ -407,11 +408,13 @@ function renderList(drugs) {
   }
   list.innerHTML = drugs.map((d, i) => {
     const cat = getCat(d.category || d.name || '');
-    const iconInner = d.image_url
-      ? `<img src="${d.image_url}" alt="${d.name||''}" onerror="this.style.display='none'"><span class="drug-icon-fallback" style="display:none">${cat.icon}</span>`
+    const hasImg = !!d.image_url;
+    const iconClass = `drug-icon icon-${cat.cls}${hasImg ? ' has-img' : ''}`;
+    const iconInner = hasImg
+      ? `<img src="${d.image_url}" alt="${d.name||''}" onerror="this.parentNode.classList.remove('has-img');this.outerHTML='<span class=\\'drug-icon-fallback\\'>${cat.icon}</span>';">`
       : `<span class="drug-icon-fallback">${cat.icon}</span>`;
     return `<div class="drug-item" onclick="openDrug(${i})">
-      <div class="drug-icon icon-${cat.cls}">${iconInner}</div>
+      <div class="${iconClass}">${iconInner}</div>
       <div class="drug-item-info">
         <div class="drug-item-name">${d.name||d.code}</div>
         <div class="drug-item-code">${d.code}</div>
@@ -586,28 +589,45 @@ async function loadAiInfo(d) {
 
 async function saveAiInfo(drugName, info) {
   try {
-    // name 컬럼으로 PATCH (code 컬럼이 없는 경우 name 기준)
     const target = currentDrug?.code
       ? 'code=eq.'+encodeURIComponent(currentDrug.code)
       : 'name=eq.'+encodeURIComponent(drugName);
     const r = await fetch(SUPA_URL+'/rest/v1/drug_codes?'+target, {
       method: 'PATCH',
-      headers: Object.assign({}, sbH(), {'Prefer':'return=minimal'}),
+      headers: Object.assign({}, sbH(), {'Prefer':'return=representation','Content-Type':'application/json'}),
       body: JSON.stringify({
         category: info.category || '',
         effect: info.effect || '',
         side_effects: info.side_effects || '',
+        side_effects_detail: info.side_effects_detail || '',
         mechanism: info.mechanism || '',
         precautions: info.precautions || '',
         interactions: info.interactions || '',
         ai_generated: true
       })
     });
-    if (r.ok) showToast('✅ Supabase에 저장됨');
-    // 로컬 캐시도 업데이트
+    const respText = await r.text();
+    if (!r.ok) {
+      let errMsg = r.status + ' 저장 실패';
+      try { const e = JSON.parse(respText); errMsg = e.message || e.hint || errMsg; } catch(_){}
+      showToast('❌ ' + errMsg);
+      console.error('saveAiInfo error:', respText);
+      return;
+    }
+    // 저장된 행이 0개인 경우 (대상 row 없음)
+    let saved = [];
+    try { saved = JSON.parse(respText); } catch(_){}
+    if (Array.isArray(saved) && saved.length === 0) {
+      showToast('⚠️ 저장 대상 약물을 찾지 못했습니다');
+      return;
+    }
+    // 로컬 캐시 업데이트
     const idx = allDrugs.findIndex(d => (d.code && d.code === currentDrug?.code) || d.name === drugName);
     if (idx >= 0) allDrugs[idx] = Object.assign(allDrugs[idx], info, {ai_generated: true});
-  } catch(e) { /* 저장 실패는 무시 */ }
+    showToast('✅ Supabase에 저장됨');
+  } catch(e) {
+    showToast('❌ 저장 오류: ' + e.message);
+  }
 }
 
 function askMore() {

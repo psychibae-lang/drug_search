@@ -359,8 +359,9 @@ function sbH() {
 }
 
 function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  if (typeof onShowScreen === "function") onShowScreen(id);
 }
 
 function showToast(msg) {
@@ -777,10 +778,8 @@ async function deleteImage() {
   } catch(e) { showToast('❌ 삭제 실패'); }
 }
 
-// 관리 화면 진입 시 잠금 초기화
-const origShowScreen = showScreen;
-function showScreen(id) {
-  origShowScreen(id);
+// 관리 화면 진입 시 잠금 초기화 (showScreen 후처리)
+function onShowScreen(id) {
   if (id === 'screenAdmin' && !adminUnlocked) {
     document.getElementById('adminLock').style.display = 'flex';
     document.getElementById('adminBody').style.display = 'none';

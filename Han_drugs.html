@@ -214,6 +214,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     </div>
     <div class="detail-hero">
       <div class="detail-icon" id="detailIcon">💊</div>
+      <div id="detailImage" style="display:none;margin-bottom:12px;">
+        <img id="detailImg" src="" alt="약물 이미지" style="width:100%;max-height:180px;object-fit:contain;border-radius:12px;border:1px solid var(--border);background:#fafafa;padding:8px;">
+      </div>
       <div class="detail-name" id="detailName"></div>
       <div class="detail-code" id="detailCode"></div>
       <span class="ai-tag">✨ AI 정보 보완</span>
@@ -359,7 +362,20 @@ function openDrug(idx) {
   document.getElementById('detailIcon').textContent = cat.icon;
   document.getElementById('detailIcon').className = `detail-icon icon-${cat.cls}`;
   document.getElementById('detailName').textContent = d.name || d.code;
-  document.getElementById('detailCode').textContent = `코드: ${d.code} · ${cat.label}`;
+  document.getElementById('detailCode').textContent = `코드: ${d.code||'-'} · ${cat.label}`;
+
+  // 이미지 처리
+  const imgWrap = document.getElementById('detailImage');
+  const imgEl = document.getElementById('detailImg');
+  if (d.image_url) {
+    imgEl.src = d.image_url;
+    imgEl.onerror = () => { imgWrap.style.display='none'; document.getElementById('detailIcon').style.display='flex'; };
+    imgWrap.style.display = 'block';
+    document.getElementById('detailIcon').style.display = 'none';
+  } else {
+    imgWrap.style.display = 'none';
+    document.getElementById('detailIcon').style.display = 'flex';
+  }
   switchDetailTab('effect');
   showScreen('screenDetail');
 
@@ -469,7 +485,7 @@ async function loadAiInfo(d) {
     try { info = JSON.parse(clean); } catch(e) { info = {effect: text}; }
 
     // DB에 저장 (백그라운드)
-    saveAiInfo(d.code, info);
+    saveAiInfo(d.name || d.code, info);
 
     // 화면에 표시
     const merged = Object.assign({}, d, info, {ai_generated: true});
@@ -484,9 +500,13 @@ async function loadAiInfo(d) {
   }
 }
 
-async function saveAiInfo(code, info) {
+async function saveAiInfo(drugName, info) {
   try {
-    await fetch(SUPA_URL+'/rest/v1/drug_codes?code=eq.'+encodeURIComponent(code), {
+    // name 컬럼으로 PATCH (code 컬럼이 없는 경우 name 기준)
+    const target = currentDrug?.code
+      ? 'code=eq.'+encodeURIComponent(currentDrug.code)
+      : 'name=eq.'+encodeURIComponent(drugName);
+    const r = await fetch(SUPA_URL+'/rest/v1/drug_codes?'+target, {
       method: 'PATCH',
       headers: Object.assign({}, sbH(), {'Prefer':'return=minimal'}),
       body: JSON.stringify({
@@ -499,8 +519,9 @@ async function saveAiInfo(code, info) {
         ai_generated: true
       })
     });
+    if (r.ok) showToast('✅ Supabase에 저장됨');
     // 로컬 캐시도 업데이트
-    const idx = allDrugs.findIndex(d => d.code === code);
+    const idx = allDrugs.findIndex(d => (d.code && d.code === currentDrug?.code) || d.name === drugName);
     if (idx >= 0) allDrugs[idx] = Object.assign(allDrugs[idx], info, {ai_generated: true});
   } catch(e) { /* 저장 실패는 무시 */ }
 }

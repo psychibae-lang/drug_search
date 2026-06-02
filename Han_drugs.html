@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>내 약물 정보 — 한강의원</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
@@ -599,7 +602,6 @@ async function saveAiInfo(drugName, info) {
         category: info.category || '',
         effect: info.effect || '',
         side_effects: info.side_effects || '',
-        side_effects_detail: info.side_effects_detail || '',
         mechanism: info.mechanism || '',
         precautions: info.precautions || '',
         interactions: info.interactions || '',

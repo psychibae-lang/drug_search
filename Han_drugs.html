@@ -710,10 +710,9 @@ async function handleFileSelect(event) {
     const sb = initSupabase();
     if (!sb) throw new Error('Supabase 초기화 실패');
 
-    // 파일명: 약물명 기반 (안전한 문자만)
-    const ext = file.name.split('.').pop().toLowerCase();
-    const safeName = (uploadTargetDrug.name || uploadTargetDrug.code || 'drug')
-      .replace(/[^a-zA-Z0-9가-힣]/g, '_') + '_' + Date.now() + '.' + ext;
+    // 파일명: 영문+타임스탬프만 사용 (한글 제거)
+    const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+    const safeName = 'drug_' + Date.now() + '_' + Math.random().toString(36).slice(2,6) + '.' + ext;
 
     const { data: upData, error: upErr } = await sb.storage
       .from('drug-images')

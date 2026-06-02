@@ -62,7 +62,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .drug-list{flex:1;overflow-y:auto;padding:0 16px 100px;}
 .drug-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;transition:all 0.15s;}
 .drug-item:hover{border-color:var(--accent);background:var(--accent-soft);}
-.drug-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.drug-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden;position:relative;}
+.drug-icon img{width:100%;height:100%;object-fit:cover;border-radius:12px;position:absolute;inset:0;}
+.drug-icon-fallback{position:relative;z-index:1;}
 .drug-item-info{flex:1;min-width:0;}
 .drug-item-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .drug-item-code{font-size:11px;color:var(--text3);font-family:monospace;}
@@ -405,8 +407,11 @@ function renderList(drugs) {
   }
   list.innerHTML = drugs.map((d, i) => {
     const cat = getCat(d.category || d.name || '');
+    const iconInner = d.image_url
+      ? `<img src="${d.image_url}" alt="${d.name||''}" onerror="this.style.display='none'"><span class="drug-icon-fallback" style="display:none">${cat.icon}</span>`
+      : `<span class="drug-icon-fallback">${cat.icon}</span>`;
     return `<div class="drug-item" onclick="openDrug(${i})">
-      <div class="drug-icon icon-${cat.cls}">${cat.icon}</div>
+      <div class="drug-icon icon-${cat.cls}">${iconInner}</div>
       <div class="drug-item-info">
         <div class="drug-item-name">${d.name||d.code}</div>
         <div class="drug-item-code">${d.code}</div>
@@ -620,7 +625,7 @@ function askMore() {
 
 
 // ── 관리 화면 ──
-const ADMIN_PW = 'han2024'; // 변경 가능
+const ADMIN_PW = 'han1234'; // 변경 가능
 let adminUnlocked = false;
 let adminDrugs = [];
 let uploadTargetDrug = null;

@@ -33,7 +33,9 @@
 body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;-webkit-font-smoothing:antialiased;}
 
 /* ── 앱 래퍼 ── */
-.app{max-width:430px;margin:0 auto;min-height:100vh;background:var(--surface);position:relative;overflow:hidden;}
+.app{max-width:100%;margin:0 auto;min-height:100vh;background:var(--surface);position:relative;overflow:hidden;}
+@media(min-width:600px){.app{max-width:600px;box-shadow:0 0 40px rgba(0,0,0,0.08);}}
+@media(min-width:900px){.app{max-width:760px;}}
 
 /* ── 스크린 전환 ── */
 .screen{display:none;min-height:100vh;flex-direction:column;}
@@ -142,7 +144,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .ai-loading-text{font-size:13px;color:var(--text2);}
 
 /* ── 하단 바 ── */
-.bottom-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-top:1px solid var(--border);padding:8px 16px 20px;display:flex;gap:8px;z-index:50;}
+.bottom-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:760px;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-top:1px solid var(--border);padding:8px 16px 20px;display:flex;gap:8px;z-index:50;}
 .bottom-btn{flex:1;padding:13px;border-radius:var(--radius-sm);font-family:'Noto Sans KR',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;}
 .bottom-btn-primary{background:var(--accent);color:#fff;}
 .bottom-btn-primary:hover{background:#2d5ef0;}
@@ -393,25 +395,38 @@ let currentDrug = null;
 let isAdminMode = false; // 관리자 접속 여부
 
 // ── 카테고리 분류 ──
-const CAT_MAP = {
-  '항우울':  {label:'항우울제', cls:'antidep', icon:'🧠'},
-  'ssri':    {label:'항우울제', cls:'antidep', icon:'🧠'},
-  '우울':    {label:'항우울제', cls:'antidep', icon:'🧠'},
-  '항불안':  {label:'항불안제', cls:'anxio',   icon:'🌿'},
-  '불안':    {label:'항불안제', cls:'anxio',   icon:'🌿'},
-  'adhd':    {label:'ADHD',    cls:'adhd',    icon:'⚡'},
-  '콘서타':  {label:'ADHD',    cls:'adhd',    icon:'⚡'},
-  '아토목신':{label:'ADHD',    cls:'adhd',    icon:'⚡'},
-  '수면':    {label:'수면제',  cls:'sleep',   icon:'🌙'},
-  '자나':    {label:'수면/항불안', cls:'sleep', icon:'🌙'},
-  '기분':    {label:'기분조절', cls:'mood',   icon:'💜'},
-  '리튬':    {label:'기분조절', cls:'mood',   icon:'💜'},
-};
+// DB category → 스타일 매핑 (키워드 포함 매칭)
+const CAT_STYLE_MAP = [
+  {keys:['항우울','ssri','우울','snri'],    label:'항우울제',     cls:'antidep', icon:'🧠'},
+  {keys:['항불안','불안','벤조'],           label:'항불안제',     cls:'anxio',   icon:'🌿'},
+  {keys:['adhd','콘서타','아토목신','집중'],label:'ADHD',         cls:'adhd',    icon:'⚡'},
+  {keys:['수면','자나','졸피','트리아'],    label:'수면제',       cls:'sleep',   icon:'🌙'},
+  {keys:['기분','리튬','발프','라모'],      label:'기분조절',     cls:'mood',    icon:'💜'},
+  {keys:['항정신','비정형','정신병'],       label:'항정신병약',   cls:'anxio',   icon:'🧩'},
+  {keys:['치매','알츠'],                    label:'치매치료제',   cls:'mood',    icon:'🔵'},
+  {keys:['위장','소화','위'],               label:'소화기약',     cls:'other',   icon:'🟢'},
+  {keys:['뇌혈','혈관','혈류'],            label:'뇌혈관제',     cls:'other',   icon:'🔴'},
+];
 
-function getCat(name) {
-  const n = (name||'').toLowerCase();
-  for (const [key, val] of Object.entries(CAT_MAP)) {
-    if (n.includes(key.toLowerCase())) return val;
+function getCat(dbCategory, fallbackName) {
+  // 1순위: DB category 필드 직접 사용
+  const raw = (dbCategory || '').trim();
+  if (raw) {
+    const rl = raw.toLowerCase();
+    for (const s of CAT_STYLE_MAP) {
+      if (s.keys.some(k => rl.includes(k))) {
+        return {label: raw, cls: s.cls, icon: s.icon};
+      }
+    }
+    // 매핑 안 되는 DB 값도 그대로 표시 (cls는 other)
+    return {label: raw, cls: 'other', icon: '💊'};
+  }
+  // 2순위: 약물명으로 키워드 fallback
+  const n = (fallbackName || '').toLowerCase();
+  for (const s of CAT_STYLE_MAP) {
+    if (s.keys.some(k => n.includes(k))) {
+      return {label: s.label, cls: s.cls, icon: s.icon};
+    }
   }
   return {label:'기타', cls:'other', icon:'💊'};
 }
@@ -486,7 +501,7 @@ function renderList(drugs) {
     return;
   }
   list.innerHTML = drugs.map((d, i) => {
-    const cat = getCat(d.category || d.name || '');
+    const cat = getCat(d.category, d.name);
     const hasImg = !!d.image_url;
     const iconClass = `drug-icon icon-${cat.cls}${hasImg ? ' has-img' : ''}`;
     const iconInner = hasImg
@@ -524,7 +539,7 @@ function openDrug(idx) {
   const d = renderedDrugs[idx];
   if (!d) return;
   currentDrug = d;
-  const cat = getCat(d.category || d.name || '');
+  const cat = getCat(d.category, d.name);
   document.getElementById('detailIcon').textContent = cat.icon;
   document.getElementById('detailIcon').className = `detail-icon icon-${cat.cls}`;
   document.getElementById('detailName').textContent = d.name || d.code;
@@ -782,7 +797,7 @@ function renderAdminList(drugs) {
   if (!drugs.length) { list.innerHTML = '<div class="empty-state"><div class="empty-text">결과 없음</div></div>'; return; }
   list.innerHTML = drugs.map((d, i) => {
     const realIdx = adminDrugs.indexOf(d);
-    const cat = getCat(d.category || d.name || '');
+    const cat = getCat(d.category, d.name);
     const imgStatus = d.image_url ? `<span class="admin-drug-status has-img">✔ 이미지</span>` : `<span class="admin-drug-status">이미지 없음</span>`;
     const aiStatus = d.ai_generated ? `<span class="admin-drug-status has-ai" style="margin-left:6px;">✔ AI</span>` : '';
     const catBadge = `<span class="cat-badge cat-${cat.cls} cat-edit-badge" onclick="openCatModal(${realIdx})" title="클릭해서 카테고리 변경">${cat.label} ✎</span>`;
@@ -901,7 +916,7 @@ let catEditTargetIdx = -1;
 function openCatModal(idx) {
   catEditTargetIdx = idx;
   const d = adminDrugs[idx];
-  const curCat = getCat(d.category || d.name || '');
+  const curCat = getCat(d.category, d.name);
   document.getElementById('catEditDrugName').textContent = d.name || d.code;
   document.getElementById('catCustomInput').value = d.category || '';
   document.getElementById('catOptionList').innerHTML = CAT_OPTIONS.map(o =>

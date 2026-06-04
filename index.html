@@ -311,6 +311,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <button class="tab-btn" onclick="switchDetailTab('mech')">기전</button>
       <button class="tab-btn" onclick="switchDetailTab('interact')">상호작용</button>
       <button class="tab-btn" onclick="switchDetailTab('caution')">주의사항</button>
+      <button class="tab-btn" onclick="switchDetailTab('links')">🔗 외부사이트</button>
     </div>
     <div class="tab-body">
       <div id="tabEffect" class="tab-pane active"></div>
@@ -318,6 +319,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div id="tabMech" class="tab-pane"></div>
       <div id="tabInteract" class="tab-pane"></div>
       <div id="tabCaution" class="tab-pane"></div>
+      <div id="tabLinks" class="tab-pane"></div>
     </div>
   </div>
 
@@ -570,7 +572,7 @@ function openDrug(idx) {
 
 function switchDetailTab(tab) {
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    const tabs = ['effect','side','mech','interact','caution'];
+    const tabs = ['effect','side','mech','interact','caution','links'];
     b.classList.toggle('active', tabs[i] === tab);
   });
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -618,6 +620,41 @@ function renderDrugInfo(d) {
     <div class="info-card" style="background:#fff8f0;margin-top:0;">
       <div class="info-card-label" style="color:#b45309;">⚠️ 중요 안내</div>
       <div class="info-card-text" style="font-size:13px;">이 정보는 참고용입니다. 복용량 변경이나 중단은 반드시 담당 의사와 상의하세요.</div>
+    </div>`;
+
+  // 외부 링크
+  const healthLink = d.health_kr_link;
+  const ysarangLink = d.ysarang_link;
+  const hasAnyLink = healthLink || ysarangLink;
+  document.getElementById('tabLinks').innerHTML = `
+    <div class="info-card" style="margin-bottom:12px;">
+      <div class="info-card-label">외부 참고 사이트</div>
+      <div class="info-card-text" style="font-size:13px;color:var(--text2);margin-bottom:16px;">아래 버튼을 클릭하면 외부 사이트에서 상세 정보를 확인할 수 있습니다.</div>
+      ${hasAnyLink ? `
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${healthLink ? `
+            <a href="${healthLink}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#fff;border:1.5px solid #3b82f6;border-radius:12px;text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#fff'">
+              <div style="width:40px;height:40px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px;">💊</div>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:600;color:#1e40af;margin-bottom:2px;">약학정보원</div>
+                <div style="font-size:11px;color:#6b7280;">의약품 상세 정보 (DUR, 성분, 허가사항)</div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>` : ''}
+          ${ysarangLink ? `
+            <a href="${ysarangLink}" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#fff;border:1.5px solid #10b981;border-radius:12px;text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#fff'">
+              <div style="width:40px;height:40px;border-radius:10px;background:#d1fae5;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px;">🏥</div>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:600;color:#065f46;margin-bottom:2px;">의사랑</div>
+                <div style="font-size:11px;color:#6b7280;">처방 및 임상 정보 참조</div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>` : ''}
+        </div>` : `
+        <div style="text-align:center;padding:30px 0;color:var(--text3);">
+          <div style="font-size:36px;margin-bottom:10px;">🔗</div>
+          <div style="font-size:13px;">등록된 외부 링크가 없습니다.</div>
+        </div>`}
     </div>`;
 }
 
